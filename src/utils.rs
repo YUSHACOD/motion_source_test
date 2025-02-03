@@ -1,4 +1,4 @@
-use bevy::prelude::Quat;
+use bevy::prelude::{EulerRot, Quat};
 
 pub fn parse_quat(input: &str) -> Result<Option<Quat>, &'static str> {
     let parts: Vec<&str> = input.split(',').collect();
@@ -21,10 +21,8 @@ pub fn parse_quat(input: &str) -> Result<Option<Quat>, &'static str> {
         .parse::<f32>()
         .map_err(|_| "Invalid float for Z")?;
 
-    let mut result = Quat::IDENTITY;
-    result.x = x;
-    result.y = y;
-    result.z = z;
-
+    // This shit is the key to get proper orientation of this shit
+    let result = Quat::from_euler(EulerRot::YXZ, -x, -y, -z);
+    ///////////////////////////////////////////////////////////////
     Ok(Some(result))
 }

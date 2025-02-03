@@ -1,29 +1,29 @@
 use bevy::prelude::*;
-// use std::net::UdpSocket;
+use std::net::UdpSocket;
 
 mod utils;
 
-// struct UdpListener {
-//     socket: UdpSocket,
-//     buffer: [u8; 1024],
-// }
+struct UdpListener {
+    socket: UdpSocket,
+    buffer: [u8; 1024],
+}
 
 fn main() {
-    // let mut udp_listener = UdpListener {
-    //     socket: UdpSocket::bind("192.168.1.4:42069").unwrap(),
-    //     buffer: [0u8; 1024],
-    // };
+    let mut udp_listener = UdpListener {
+        socket: UdpSocket::bind("192.168.1.4:42069").unwrap(),
+        buffer: [0u8; 1024],
+    };
 
     // Main shit do not fuck with this thing /////////
     App::new()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Update, move_player)
-        // .add_systems(Update, rot_player)
-        // .add_systems(Update, move |event: EventWriter<RotEvent>| {
-        //     rot_event(event, &mut udp_listener);
-        // })
-        // .add_event::<RotEvent>()
+        .add_systems(Update, rot_player)
+        .add_systems(Update, move |event: EventWriter<RotEvent>| {
+            rot_event(event, &mut udp_listener);
+        })
+        .add_event::<RotEvent>()
         .run();
     //////////////////////////////////////////////////
 }
@@ -31,8 +31,8 @@ fn main() {
 #[derive(Component)]
 struct Player;
 
-// #[derive(Event)]
-// struct RotEvent(Option<Quat>);
+#[derive(Event)]
+struct RotEvent(Option<Quat>);
 
 fn setup(
     mut commands: Commands,
@@ -49,7 +49,7 @@ fn setup(
     // cuboid
     commands.spawn((
         Player,
-        Mesh3d(meshes.add(Cuboid::new(2.0, 0.5, 1.0))),
+        Mesh3d(meshes.add(Cuboid::new(1.0, 0.5, 2.0))),
         MeshMaterial3d(materials.add(Color::srgb_u8(124, 144, 255))),
         Transform::from_xyz(0.0, 1.0, 0.0),
     ));
@@ -66,36 +66,36 @@ fn setup(
     // camera
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 4.5, 9.0).looking_at(Vec3::ZERO, Vec3::ZERO),
+        Transform::from_xyz(9.0, 4.5, 0.0).looking_at(Vec3::ZERO, Vec3::ZERO),
     ));
 }
 
-// fn rot_event(mut event_writer: EventWriter<RotEvent>, udp_listener: &mut UdpListener) {
-//     match udp_listener.socket.recv_from(&mut udp_listener.buffer) {
-//         Ok((size, _src_addr)) => {
-//             let message = String::from_utf8_lossy(&udp_listener.buffer[..size]);
-//
-//             let quat = utils::parse_quat(&message).unwrap_or(None);
-//             event_writer.send(RotEvent(quat));
-//         }
-//         Err(e) => {
-//             eprintln!("❌ Receive error: {}", e);
-//         }
-//     }
-// }
+fn rot_event(mut event_writer: EventWriter<RotEvent>, udp_listener: &mut UdpListener) {
+    match udp_listener.socket.recv_from(&mut udp_listener.buffer) {
+        Ok((size, _src_addr)) => {
+            let message = String::from_utf8_lossy(&udp_listener.buffer[..size]);
 
-// fn rot_player(
-//     mut event_reader: EventReader<RotEvent>,
-//     mut transforms: Query<&mut Transform, With<Player>>) {
-//     for mut transform in transforms.iter_mut() {
-//         for quat in event_reader.read() {
-//             match quat.0 {
-//                 Some(rot) => transform.rotation = rot,
-//                 None => (),
-//             }
-//         }
-//     }
-// }
+            let quat = utils::parse_quat(&message).unwrap_or(None);
+            event_writer.send(RotEvent(quat));
+        }
+        Err(e) => {
+            eprintln!("❌ Receive error: {}", e);
+        }
+    }
+}
+
+fn rot_player(
+    mut event_reader: EventReader<RotEvent>,
+    mut transforms: Query<&mut Transform, With<Player>>) {
+    for mut transform in transforms.iter_mut() {
+        for quat in event_reader.read() {
+            match quat.0 {
+                Some(rot) => transform.rotation = rot,
+                None => (),
+            }
+        }
+    }
+}
 
 const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = 0.05;
@@ -109,16 +109,16 @@ fn move_player(
 
         // translation
         if keys.pressed(KeyCode::KeyW) {
-            direction.z -= 1.0
-        };
-        if keys.pressed(KeyCode::KeyA) {
             direction.x -= 1.0
         };
-        if keys.pressed(KeyCode::KeyS) {
+        if keys.pressed(KeyCode::KeyA) {
             direction.z += 1.0
         };
-        if keys.pressed(KeyCode::KeyD) {
+        if keys.pressed(KeyCode::KeyS) {
             direction.x += 1.0
+        };
+        if keys.pressed(KeyCode::KeyD) {
+            direction.z -= 1.0
         };
         if keys.pressed(KeyCode::ArrowUp) {
             direction.y += 1.0
