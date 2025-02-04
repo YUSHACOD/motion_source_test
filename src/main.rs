@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use std::process;
 use std::net::UdpSocket;
 
 mod utils;
@@ -8,9 +9,17 @@ struct UdpListener {
     buffer: [u8; 1024],
 }
 
-fn main() {
+fn main() { 
+    let args: Vec<String> = std::env::args().collect();
+
+    if args.len() != 3 {
+        eprintln!("Usage: {} <local_network_ip> <port>", args[0]);
+        process::exit(1);
+    }
+
+    let sockt_addr = format!("{}:{}", args[1], args[2]);
     let mut udp_listener = UdpListener {
-        socket: UdpSocket::bind("192.168.1.4:42069").unwrap(),
+        socket: UdpSocket::bind(sockt_addr.as_str()).unwrap(),
         buffer: [0u8; 1024],
     };
 
