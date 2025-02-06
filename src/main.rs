@@ -1,15 +1,15 @@
 use bevy::prelude::*;
-use std::process;
 use std::net::UdpSocket;
+use std::process;
 
 mod utils;
 
 struct UdpListener {
     socket: UdpSocket,
-    buffer: [u8; 1024],
+    buffer: [u8; 12],
 }
 
-fn main() { 
+fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.len() != 3 {
@@ -20,7 +20,7 @@ fn main() {
     let sockt_addr = format!("{}:{}", args[1], args[2]);
     let mut udp_listener = UdpListener {
         socket: UdpSocket::bind(sockt_addr.as_str()).unwrap(),
-        buffer: [0u8; 1024],
+        buffer: [0u8; 12],
     };
 
     // Main shit do not fuck with this thing /////////
@@ -28,7 +28,6 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, setup)
         .add_systems(Update, move_player)
-        .add_systems(Update, rot_player)
         .add_systems(Update, move |event: EventWriter<RotEvent>| {
             rot_event(event, &mut udp_listener);
         })
@@ -81,10 +80,8 @@ fn setup(
 
 fn rot_event(mut event_writer: EventWriter<RotEvent>, udp_listener: &mut UdpListener) {
     match udp_listener.socket.recv_from(&mut udp_listener.buffer) {
-        Ok((size, _src_addr)) => {
-            let message = String::from_utf8_lossy(&udp_listener.buffer[..size]);
-
-            let quat = utils::parse_quat(&message).unwrap_or(None);
+        Ok((_size, _src_addr)) => {
+            let quat = utils::parse_quat(&udp_listener.buffer).unwrap_or(None);
             event_writer.send(RotEvent(quat));
         }
         Err(e) => {
@@ -93,22 +90,10 @@ fn rot_event(mut event_writer: EventWriter<RotEvent>, udp_listener: &mut UdpList
     }
 }
 
-fn rot_player(
-    mut event_reader: EventReader<RotEvent>,
-    mut transforms: Query<&mut Transform, With<Player>>) {
-    for mut transform in transforms.iter_mut() {
-        for quat in event_reader.read() {
-            match quat.0 {
-                Some(rot) => transform.rotation = rot,
-                None => (),
-            }
-        }
-    }
-}
-
 const MOVE_SPEED: f32 = 0.1;
 const ROT_SPEED: f32 = 0.05;
 fn move_player(
+    mut event_reader: EventReader<RotEvent>,
     mut transforms: Query<&mut Transform, With<Player>>,
     keys: Res<ButtonInput<KeyCode>>,
 ) {
@@ -160,13 +145,18 @@ fn move_player(
             transform.translation += MOVE_SPEED * direction.normalize();
         }
 
-        // transform.rotation.x += rot.x;
-        // transform.rotation.y += rot.y;
         if rot != Quat::IDENTITY {
             println!("{:?}", transform.rotation);
             transform.rotate_x(rot.x * ROT_SPEED);
             transform.rotate_y(rot.y * ROT_SPEED);
             transform.rotate_z(rot.z * ROT_SPEED);
+        }
+
+        for quat in event_reader.read() {
+            match quat.0 {
+                Some(rot) => transform.rotation = rot,
+                None => (),
+            }
         }
     }
 }
