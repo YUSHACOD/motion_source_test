@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "*", features = ["dynamic_linking"]}
+tokio = { version = "*", features = ["full"] }
 
 [profile.dev]
 opt-level = 1

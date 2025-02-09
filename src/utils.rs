@@ -1,6 +1,6 @@
 use bevy::prelude::{EulerRot, Quat};
 
-pub fn parse_quat(input_buffer: &[u8; 12]) -> Result<Option<Quat>, &'static str> {
+pub fn parse_quat(input_buffer: &[u8; 12]) -> Result<Quat, &'static str> {
 
     let x = f32::from_be_bytes(input_buffer[0..4].try_into().unwrap());
     let y = f32::from_be_bytes(input_buffer[4..8].try_into().unwrap());
@@ -10,5 +10,5 @@ pub fn parse_quat(input_buffer: &[u8; 12]) -> Result<Option<Quat>, &'static str>
     let result = Quat::from_euler(EulerRot::YXZ, -x, -y, -z);
     ///////////////////////////////////////////////////////////////
 
-    Ok(Some(result))
+    Ok(result)
 }
