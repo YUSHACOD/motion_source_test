@@ -1,14 +1,14 @@
-mod setup;
-mod rotation;
-mod udp_listener;
 mod input_handler;
+mod rotation;
+mod setup;
+mod udp_listener;
 
 use bevy::prelude::*;
 use std::process;
 
-use setup::setup;
 use input_handler::handle_input;
 use rotation::{AtomicQuat, RotationResource};
+use setup::setup;
 use udp_listener::start_udp_listener;
 
 #[derive(Component)]
@@ -30,7 +30,8 @@ fn main() {
 
     // Start UDP listener in a separate thread
     let rotation_data_clone = rotation_atomic.clone();
-    std::thread::spawn(move || start_udp_listener(rotation_data_clone, sockt_addr));
+    let udp_listener_thread_handle =
+        std::thread::spawn(move || start_udp_listener(rotation_data_clone, sockt_addr));
 
     // Bevy App
     App::new()
@@ -39,4 +40,6 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(Update, handle_input)
         .run();
+
+    udp_listener_thread_handle.join().unwrap();
 }
